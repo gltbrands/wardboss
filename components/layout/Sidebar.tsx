@@ -46,7 +46,7 @@ export default function Sidebar() {
       <div className="px-4 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-0 leading-none">
           <span className="text-xl font-black tracking-tight text-white">W</span>
-          <svg viewBox="0 0 20 22" width="19" height="21" style={{ display: 'inline-block', verticalAlign: '-3px', marginLeft: '1px', marginRight: '1px' }}>
+          <svg viewBox="0 0 20 22" width="19" height="21" style={{ display: 'inline-block', verticalAlign: '-5px', marginLeft: '1px', marginRight: '1px' }}>
             <polygon points="10,1 12.4,7.8 19.5,7.8 14,12 16.2,18.8 10,15 3.8,18.8 6,12 0.5,7.8 7.6,7.8" fill="#CC0000" />
           </svg>
           <span className="text-xl font-black tracking-tight text-white">RD</span><span className="text-xl font-black tracking-tight" style={{ color: '#00AEEF' }}>BOSS</span>

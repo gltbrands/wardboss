@@ -1,8 +1,9 @@
 'use client'
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { TOPICS, type TopicKey } from '@/lib/topics'
 import type { IntelResult, TimelineEvent, ProximityAlert } from '@/app/api/intel/route'
+import type { IntelSuggestion } from '@/app/api/intel-search/route'
 
 const TYPE_ICON: Record<TimelineEvent['type'], string> = {
   contribution: '💰',
@@ -28,8 +29,10 @@ export default function IntelPage() {
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<'timeline' | 'proximity' | 'relationships'>('timeline')
   const [isPending, startTransition] = useTransition()
+  const [suggestions, setSuggestions] = useState<IntelSuggestion[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
 
-  // Read ?q= from URL on load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const q = params.get('q')
@@ -37,8 +40,45 @@ export default function IntelPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Debounced typeahead - only when no result is showing
+  useEffect(() => {
+    if (!query.trim() || query.trim().length < 2 || result) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+    const timer = setTimeout(() => {
+      fetch(`/api/intel-search?q=${encodeURIComponent(query.trim())}`)
+        .then(r => r.json())
+        .then((data: { suggestions: IntelSuggestion[] }) => {
+          if (data.suggestions?.length) {
+            setSuggestions(data.suggestions)
+            setShowSuggestions(true)
+          } else {
+            setSuggestions([])
+            setShowSuggestions(false)
+          }
+        })
+        .catch(() => {})
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [query, result])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
   function runSearch(q: string) {
     if (!q.trim() || q.trim().length < 2) return
+    setShowSuggestions(false)
+    setSuggestions([])
     startTransition(() => {
       setError(null)
       setResult(null)
@@ -51,6 +91,14 @@ export default function IntelPage() {
         })
         .catch(() => setError('Failed to load. Try again.'))
     })
+  }
+
+  function clearSearch() {
+    setQuery('')
+    setResult(null)
+    setError(null)
+    setSuggestions([])
+    setShowSuggestions(false)
   }
 
   const pbScore = result?.summary.powerBrokerScore ?? 0
@@ -67,24 +115,69 @@ export default function IntelPage() {
       </div>
 
       {/* Search bar */}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && runSearch(query)}
-          placeholder="e.g. Thomas Moore, Zoning Capital Group, 43rd Ward…"
-          className="flex-1 px-4 py-3 rounded-xl text-sm outline-none"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
-        />
-        <button
-          onClick={() => runSearch(query)}
-          disabled={isPending}
-          className="px-6 py-3 rounded-xl text-sm font-bold"
-          style={{ background: 'var(--accent)', color: '#000', opacity: isPending ? 0.7 : 1 }}
-        >
-          {isPending ? 'Searching…' : 'Investigate'}
-        </button>
+      <div className="relative" ref={searchRef}>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={query}
+            onChange={e => { setQuery(e.target.value); if (result) setResult(null) }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') runSearch(query)
+              if (e.key === 'Escape') setShowSuggestions(false)
+            }}
+            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+            placeholder="Start typing a name to see matches..."
+            className="flex-1 px-4 py-3 rounded-xl text-sm outline-none"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
+          />
+          {result && (
+            <button
+              onClick={clearSearch}
+              className="px-4 py-3 rounded-xl text-sm font-medium shrink-0"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)' }}
+            >
+              ← Back
+            </button>
+          )}
+          <button
+            onClick={() => runSearch(query)}
+            disabled={isPending}
+            className="px-6 py-3 rounded-xl text-sm font-bold shrink-0"
+            style={{ background: 'var(--accent)', color: '#000', opacity: isPending ? 0.7 : 1 }}
+          >
+            {isPending ? 'Searching…' : 'Investigate'}
+          </button>
+        </div>
+
+        {/* Suggestions dropdown */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div
+            className="absolute left-0 right-0 mt-1 rounded-xl overflow-hidden z-50"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}
+          >
+            {suggestions.map((s, i) => (
+              <button
+                key={i}
+                onMouseDown={() => { setQuery(s.name); runSearch(s.name) }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors"
+                style={{ color: 'var(--foreground)', borderBottom: i < suggestions.length - 1 ? '1px solid var(--border)' : 'none' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full shrink-0 font-medium"
+                  style={{
+                    background: s.type === 'lobbyist' ? 'rgba(0,174,239,0.12)' : 'rgba(167,139,250,0.12)',
+                    color: s.type === 'lobbyist' ? 'var(--accent)' : 'var(--accent2)',
+                  }}
+                >
+                  {s.type}
+                </span>
+                {s.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {error && (
@@ -342,10 +435,11 @@ export default function IntelPage() {
                 <h3 className="font-bold mb-3">Clients ({result.summary.clients.length})</h3>
                 <div className="space-y-1 max-h-48 overflow-y-auto">
                   {result.summary.clients.slice(0, 20).map(c => (
-                    <Link key={c} href={`/intel?q=${encodeURIComponent(c)}`}
-                      className="text-sm block py-0.5 hover:underline truncate" style={{ color: 'var(--foreground)' }}>
+                    <button key={c} onClick={() => { setQuery(c); runSearch(c) }}
+                      className="text-sm block py-0.5 hover:underline truncate text-left w-full"
+                      style={{ color: 'var(--foreground)' }}>
                       {c}
-                    </Link>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -370,10 +464,11 @@ export default function IntelPage() {
                   <div className="space-y-1">
                     {result.relatedClients.map(c => (
                       <div key={c.id} className="flex items-center justify-between text-sm">
-                        <Link href={`/intel?q=${encodeURIComponent(c.name)}`}
-                          className="truncate hover:underline" style={{ color: 'var(--foreground)' }}>
+                        <button onClick={() => { setQuery(c.name); runSearch(c.name) }}
+                          className="truncate hover:underline text-left"
+                          style={{ color: 'var(--foreground)' }}>
                           {c.name}
-                        </Link>
+                        </button>
                         <span className="shrink-0 ml-2 text-xs" style={{ color: 'var(--muted)' }}>
                           {c.count} actions
                         </span>
@@ -393,17 +488,11 @@ export default function IntelPage() {
           <p className="text-4xl">🔍</p>
           <p className="font-bold text-lg">Enter any name to start investigating</p>
           <p className="text-sm max-w-md mx-auto" style={{ color: 'var(--muted)' }}>
-            Lobbyists, developers, clients, law firms, aldermen - any name that appears in the Chicago Board of Ethics data will surface their full financial trail.
+            Lobbyists, developers, clients, law firms, aldermen - any name that appears in Chicago Board of Ethics records will surface their full financial trail.
           </p>
-          <div className="flex flex-wrap gap-2 justify-center mt-4">
-            {['Thomas Moore', 'Shefsky & Froelich', 'Zoning Capital', 'Commonwealth Edison'].map(name => (
-              <button key={name} onClick={() => { setQuery(name); runSearch(name) }}
-                className="text-xs px-3 py-1.5 rounded-lg"
-                style={{ background: 'rgba(0,174,239,0.08)', color: 'var(--accent)', border: '1px solid rgba(0,174,239,0.2)' }}>
-                {name}
-              </button>
-            ))}
-          </div>
+          <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
+            Start typing to see matching names from the dataset.
+          </p>
         </div>
       )}
     </div>
