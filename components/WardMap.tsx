@@ -99,9 +99,9 @@ export default function WardMap({ wards }: { wards: Ward[] }) {
       }
     }
     return {
-      fillColor: isSelected ? '#22d3ee' : wardBaseColor(ward),
+      fillColor: isSelected ? '#00AEEF' : wardBaseColor(ward),
       fillOpacity: isSelected ? 0.55 : isHovered ? 0.3 : 0.18,
-      color: isSelected ? '#22d3ee' : 'rgba(255,255,255,0.25)',
+      color: isSelected ? '#00AEEF' : 'rgba(255,255,255,0.25)',
       weight: isSelected ? 2.5 : 1,
     }
   }, [activeTopic, wardIntel, maxTopicTotal])
@@ -266,7 +266,7 @@ export default function WardMap({ wards }: { wards: Ward[] }) {
               onClick={() => setActiveTopic(null)}
               className="px-2 py-0.5 rounded text-xs font-semibold transition-all"
               style={{
-                background: !activeTopic ? 'rgba(34,211,238,0.2)' : 'rgba(255,255,255,0.05)',
+                background: !activeTopic ? 'rgba(0,174,239,0.2)' : 'rgba(255,255,255,0.05)',
                 color: !activeTopic ? 'var(--accent)' : 'var(--muted)',
                 border: `1px solid ${!activeTopic ? 'var(--accent)' : 'transparent'}`,
               }}
@@ -382,14 +382,14 @@ export default function WardMap({ wards }: { wards: Ward[] }) {
                 className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all border-b"
                 style={{
                   borderColor: 'var(--border)',
-                  background: selected === ward.ward ? 'rgba(34,211,238,0.1)' : 'transparent',
+                  background: selected === ward.ward ? 'rgba(0,174,239,0.1)' : 'transparent',
                   borderLeft: selected === ward.ward ? '3px solid var(--accent)' : '3px solid transparent',
                 }}
               >
                 <div
                   className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black"
                   style={{
-                    background: selected === ward.ward ? 'rgba(34,211,238,0.2)' : 'rgba(255,255,255,0.06)',
+                    background: selected === ward.ward ? 'rgba(0,174,239,0.2)' : 'rgba(255,255,255,0.06)',
                     color: wardBaseColor(ward.ward),
                   }}
                 >
@@ -453,7 +453,7 @@ export default function WardMap({ wards }: { wards: Ward[] }) {
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: 'rgba(34,211,238,0.15)', color: 'var(--accent)' }}>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: 'rgba(0,174,239,0.15)', color: 'var(--accent)' }}>
                     Ward {selectedWard.ward}
                   </span>
                   <h3 className="font-black text-sm text-white">{selectedWard.alderman}</h3>
@@ -480,7 +480,7 @@ export default function WardMap({ wards }: { wards: Ward[] }) {
                     <div className="flex gap-1 mt-0.5 flex-wrap">
                       {selectedWard.website && (
                         <a href={selectedWard.website} target="_blank" rel="noopener noreferrer"
-                          className="px-2 py-0.5 rounded text-xs" style={{ background: 'rgba(34,211,238,0.1)', color: 'var(--accent)' }}>
+                          className="px-2 py-0.5 rounded text-xs" style={{ background: 'rgba(0,174,239,0.1)', color: 'var(--accent)' }}>
                           Website
                         </a>
                       )}

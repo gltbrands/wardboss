@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import WardMapLoader from '@/components/WardMapLoader'
 
 interface RawBoundary {
@@ -22,16 +23,16 @@ interface RawOffice {
 
 async function getWards() {
   const base = 'https://data.cityofchicago.org/resource'
-  const token = process.env.CHICAGO_APP_TOKEN
-  const tokenParam = token ? `&$$app_token=${token}` : ''
+  const headers = { Accept: 'application/json' }
 
   try {
-    const [boundaries, offices] = await Promise.all([
-      fetch(`${base}/p293-wvbd.json?$limit=55${tokenParam}`, { next: { revalidate: 86400 } })
-        .then(r => r.json() as Promise<RawBoundary[]>),
-      fetch(`${base}/htai-wnw4.json?$limit=55&$order=ward%20ASC${tokenParam}`, { next: { revalidate: 3600 } })
-        .then(r => r.json() as Promise<RawOffice[]>),
+    const [rawBoundaries, rawOffices] = await Promise.all([
+      fetch(`${base}/p293-wvbd.json?$limit=55`, { next: { revalidate: 86400 }, headers }).then(r => r.json()),
+      fetch(`${base}/htai-wnw4.json?$limit=55&$order=ward%20ASC`, { next: { revalidate: 3600 }, headers }).then(r => r.json()),
     ])
+
+    const boundaries: RawBoundary[] = Array.isArray(rawBoundaries) ? rawBoundaries : []
+    const offices: RawOffice[] = Array.isArray(rawOffices) ? rawOffices : []
 
     const officeMap = new Map<number, RawOffice>()
     for (const o of offices) officeMap.set(parseInt(o.ward, 10), o)
