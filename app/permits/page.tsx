@@ -34,7 +34,7 @@ export default function PermitsPage() {
   const [q, setQ] = useState('')
   const [ward, setWard] = useState('')
   const [type, setType] = useState('')
-  const [year, setYear] = useState('2024')
+  const [year, setYear] = useState('2025')
   const [page, setPage] = useState(0)
   const [data, setData] = useState<PermitData | null>(null)
   const [loading, setLoading] = useState(true)
